@@ -14,11 +14,19 @@ namespace _658ChatBot {
     public class MessagesController : ApiController {
         /// <summary>
         /// POST: api/Messages
-        /// Receive a message from a user and reply to it
+        /// calls EchoDialog
+        /// This code accepts messages and counts them
+        /// if the user sends "reset" it will ask to confirm, then reset count
+        /// Also greets and says goodbye to user
         /// </summary>
         public async Task<HttpResponseMessage> Post([FromBody]Activity activity){
-            if (activity.Type == ActivityTypes.Message){
+            ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
+            if (activity.Type == ActivityTypes.Message) {
                 await Conversation.SendAsync(activity, () => new EchoDialog()); // bot builder style
+            }
+            else if (activity.Type == ActivityTypes.ConversationUpdate) { // greets user DEBUG: displays twice, stop this
+                Activity reply = activity.CreateReply($"Hi! I'm the CS658 ChatBot.");
+                await connector.Conversations.ReplyToActivityAsync(reply);
             }
             else {
                 HandleSystemMessage(activity);
@@ -29,12 +37,39 @@ namespace _658ChatBot {
 
         [Serializable]
         public class EchoDialog : IDialog<object> {
+            protected int count = 1;
             public async Task StartAsync(IDialogContext context){
                 context.Wait(MessageReceivedAsync);
             }
-            public async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> argument){
+            public virtual async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> argument){
                 var message = await argument;
-                await context.PostAsync("You said: " + message.Text);
+                if (message.Text == "reset"){ // resets count when requested. asks for confirmation.
+                    PromptDialog.Confirm(
+                        context,
+                        AfterResetAsync,
+                        "Are you sure you want to reset the count?",
+                        "Didn't get that!",
+                        promptStyle: PromptStyle.None); // sends result of confirmation to reset handler
+                }
+                else if (message.Text == "goodbye"){ // says goodbye and exits chat (not gracefully)
+                    await context.PostAsync("Goodbye!");
+                    context.Wait(MessageReceivedAsync);
+                    Environment.Exit(0);
+                }
+                else {
+                    await context.PostAsync($"{this.count++}: You said {message.Text}"); // updates count and echoes user message
+                    context.Wait(MessageReceivedAsync);
+                }
+            }
+            public async Task AfterResetAsync(IDialogContext context, IAwaitable<bool> argument){ // conditional reset handler
+                var confirm = await argument;
+                if (confirm){
+                    this.count = 1;
+                    await context.PostAsync($"{this.count}: Reset count.");
+                }
+                else{
+                    await context.PostAsync("Did not reset count.");
+                }
                 context.Wait(MessageReceivedAsync);
             }
         }
