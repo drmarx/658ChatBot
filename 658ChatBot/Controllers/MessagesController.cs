@@ -24,7 +24,7 @@ namespace _658ChatBot {
             if (activity.Type == ActivityTypes.Message) {
                 await Conversation.SendAsync(activity, () => new EchoDialog()); // bot builder style
             }
-            else if (activity.Type == ActivityTypes.ConversationUpdate) { // greets user DEBUG: displays twice, stop this
+            else if (activity.Type == ActivityTypes.ConversationUpdate && activity.MembersAdded[0].Name != "Bot") { // greets user when they join
                 Activity reply = activity.CreateReply($"Hi! I'm the CS658 ChatBot.");
                 await connector.Conversations.ReplyToActivityAsync(reply);
             }
