@@ -57,12 +57,7 @@ namespace _658ChatBot {
                         "What kind of printer is it?",
                         promptStyle: PromptStyle.Auto); // sends result of confirmation to reset handler
                 }
-                else if (message.Text == "goodbye"){ // says goodbye and exits chat (not gracefully)
-                    await context.PostAsync("Goodbye!");
-                    context.Wait(MessageReceivedAsync);
-                    Environment.Exit(0);
-                }
-                else if (message.Text.Contains("email")){
+                else if (message.Text.Contains("email") || message.Text.Contains("e-mail")){
                     var emailroute = new List<string>();
                     emailroute.Add("Outlook Client");
                     emailroute.Add("Outlook.Office365.com");
@@ -73,19 +68,26 @@ namespace _658ChatBot {
                         "How are you accessing your email?",
                         promptStyle: PromptStyle.Auto);
                 }
+                else if (message.Text == "goodbye") { // says goodbye and exits chat (not gracefully)
+                    await context.PostAsync("Goodbye!");
+                    context.Wait(MessageReceivedAsync);
+                    Environment.Exit(0);
+                }
             }
 
             public async Task AfterPrinterAsync(IDialogContext context,IAwaitable<string> argument){
                 string type = await argument;
                 if (type == "Network printer") {
-                    //await context.PostAsync("Enter the name of the network printer:");
                     PromptDialog.Text(
                         context,
                         AfterNetworkPrinterAsync,
                         "What is the name of the network printer? Its name will be like " + @"\\\\" + "ADPRINT03\\BOL272a_PCL");
                 }
                 else {
-                    await context.PostAsync("What is the model of the printer? DEBUG: no response");
+                    PromptDialog.Text(
+                        context,
+                        AfterNetworkPrinterAsync,
+                        "What is the model of your printer?");
                 }
             }
 
@@ -94,20 +96,9 @@ namespace _658ChatBot {
                 PromptDialog.Text(
                         context,
                         AfterITAsync,
-                        "Please descripe the issue you are facing.");
+                        "Please describe the issue you are facing.");
             }
 
-            public async Task AfterResetAsync(IDialogContext context, IAwaitable<bool> argument){ // conditional reset handler
-                var confirm = await argument;
-                if (confirm){
-                    this.count = 1;
-                    await context.PostAsync($"{this.count}: Reset count.");
-                }
-                else {
-                    await context.PostAsync("Did not reset count.");
-                }
-                context.Wait(MessageReceivedAsync);
-            }
             public async Task AfterEmailAsync(IDialogContext context, IAwaitable<string> argument){
                 var confirm = await argument;
                 if (confirm == "Outlook Client") {
