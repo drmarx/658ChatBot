@@ -15,15 +15,13 @@ namespace _658ChatBot {
     public class MessagesController : ApiController {
         /// <summary>
         /// POST: api/Messages
-        /// calls EchoDialog
-        /// This code accepts messages and counts them
-        /// if the user sends "reset" it will ask to confirm, then reset count
-        /// Also greets and says goodbye to user
+        /// calls HelpDialog
+        /// begins simple IT troubleshooting / info gathering
         /// </summary>
         public async Task<HttpResponseMessage> Post([FromBody]Activity activity){
             ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
             if (activity.Type == ActivityTypes.Message){
-                await Conversation.SendAsync(activity, () => new HelpDialog()); // bot builder style
+                await Conversation.SendAsync(activity, () => new HelpDialog()); // begins conversation
             }
             else if (activity.Type == ActivityTypes.ConversationUpdate && activity.MembersAdded[0] != null && activity.MembersAdded[0].Name != "Bot"){ // greets user when they join
                 var reply = activity.CreateReply($"Hi! I'm the CS658 ChatBot.");
@@ -40,7 +38,7 @@ namespace _658ChatBot {
 
         [Serializable]
         public class HelpDialog : IDialog<object> {
-            protected int count = 1;
+            // protected int count = 1;
             public async Task StartAsync(IDialogContext context) {
                 context.Wait(MessageReceivedAsync);
             }
