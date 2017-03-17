@@ -46,7 +46,7 @@ namespace _658ChatBot {
             }
             public virtual async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> argument){
                 var message = await argument;
-                if (message.Text.Contains("printer") || message.Text.Contains("print")){ // resets count when requested. asks for confirmation.
+                if (message.Text.Contains("printer") || message.Text.Contains("print")){ // begins printer troubleshooting
                     var printertype = new List<string>();
                     printertype.Add("Local printer");
                     printertype.Add("Network printer");
@@ -55,9 +55,9 @@ namespace _658ChatBot {
                         AfterPrinterAsync,
                         printertype,
                         "What kind of printer is it?",
-                        promptStyle: PromptStyle.Auto); // sends result of confirmation to reset handler
+                        promptStyle: PromptStyle.Auto); // sends result to printer handler
                 }
-                else if (message.Text.Contains("email") || message.Text.Contains("e-mail")){
+                else if (message.Text.Contains("email") || message.Text.Contains("e-mail")){ // begins email troubleshooting
                     var emailroute = new List<string>();
                     emailroute.Add("Outlook Client");
                     emailroute.Add("Outlook.Office365.com");
@@ -66,7 +66,7 @@ namespace _658ChatBot {
                         AfterEmailAsync,
                         emailroute,
                         "How are you accessing your email?",
-                        promptStyle: PromptStyle.Auto);
+                        promptStyle: PromptStyle.Auto); // sends result to email handler
                 }
                 else if (message.Text == "goodbye") { // says goodbye and exits chat (not gracefully)
                     await context.PostAsync("Goodbye!");
@@ -77,13 +77,13 @@ namespace _658ChatBot {
 
             public async Task AfterPrinterAsync(IDialogContext context,IAwaitable<string> argument){
                 string type = await argument;
-                if (type == "Network printer") {
+                if (type == "Network printer") { // if network printer
                     PromptDialog.Text(
                         context,
                         AfterNetworkPrinterAsync,
                         "What is the name of the network printer? Its name will be like " + @"\\\\" + "ADPRINT03\\BOL272a_PCL");
                 }
-                else {
+                else { // if local printer
                     PromptDialog.Text(
                         context,
                         AfterNetworkPrinterAsync,
@@ -96,7 +96,7 @@ namespace _658ChatBot {
                 PromptDialog.Text(
                         context,
                         AfterITAsync,
-                        "Please describe the issue you are facing.");
+                        "Please describe the issue you are facing."); // send description to IT handler
             }
 
             public async Task AfterEmailAsync(IDialogContext context, IAwaitable<string> argument){
@@ -105,13 +105,13 @@ namespace _658ChatBot {
                     PromptDialog.Text(
                         context,
                         AfterITAsync,
-                        "Please describe the issue you are facing.");
+                        "Please describe the issue you are facing."); // send description to IT handler
                 }
                 else {
-                    await context.PostAsync("Are you having troubles accessing other webpages? DEBUG: no response");
+                    await context.PostAsync("Are you having troubles accessing other webpages? DEBUG: no response"); // to network?
                 }
             }
-            public async Task AfterITAsync(IDialogContext context, IAwaitable<string> argument){
+            public async Task AfterITAsync(IDialogContext context, IAwaitable<string> argument){ // TODO connect to support tech
                 var confirm = await argument;
                 await context.PostAsync("Thank you for the information. Connecting you to a support tech. Standby. DEBUG: send problem string to tech");
             }
