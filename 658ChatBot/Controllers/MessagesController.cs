@@ -63,16 +63,15 @@ namespace _658ChatBot {
                     Environment.Exit(0);
                 }
                 else if (message.Text.Contains("email")){
-                    PromptDialog.Confirm(
+                    var emailroute = new List<string>();
+                    emailroute.Add("Outlook Client");
+                    emailroute.Add("Outlook.Office365.com");
+                    PromptDialog.Choice(
                         context,
                         AfterEmailAsync,
-                        "You are having trouble with your email?",
-                        "My apologies. Connecting you to a support tech. Standby.",
+                        emailroute,
+                        "How are you accessing your email?",
                         promptStyle: PromptStyle.Auto);
-                }
-                else {
-                    await context.PostAsync($"{this.count++}: You said {message.Text}"); // updates count and echoes user message
-                    context.Wait(MessageReceivedAsync);
                 }
             }
 
@@ -83,13 +82,19 @@ namespace _658ChatBot {
                     PromptDialog.Text(
                         context,
                         AfterNetworkPrinterAsync,
-                        "What is the name of the network printer? Its name will be like \\ \\ADPRINT03\\BOL272a_PCL");
+                        "What is the name of the network printer? Its name will be like " + @"\\\\" + "ADPRINT03\\BOL272a_PCL");
+                }
+                else {
+                    await context.PostAsync("What is the model of the printer? DEBUG: no response");
                 }
             }
 
             public async Task AfterNetworkPrinterAsync(IDialogContext context,IAwaitable<string> argument) {
                 string type = await argument;
-                await context.PostAsync("Please describe the issue you are experiencing with this printer. DEBUG: no response");
+                PromptDialog.Text(
+                        context,
+                        AfterITAsync,
+                        "Please descripe the issue you are facing.");
             }
 
             public async Task AfterResetAsync(IDialogContext context, IAwaitable<bool> argument){ // conditional reset handler
@@ -103,28 +108,21 @@ namespace _658ChatBot {
                 }
                 context.Wait(MessageReceivedAsync);
             }
-            public async Task AfterEmailAsync(IDialogContext context, IAwaitable<bool> argument){
+            public async Task AfterEmailAsync(IDialogContext context, IAwaitable<string> argument){
                 var confirm = await argument;
-                if (confirm){
-                    PromptDialog.Confirm(
+                if (confirm == "Outlook Client") {
+                    PromptDialog.Text(
                         context,
                         AfterITAsync,
-                        "Are you using the Outlook client or the website Outlook.Office365.com?",
-                        "My apologies. Connecting you to a support tech. Standby.",
-                        promptStyle: PromptStyle.Keyboard);
+                        "Please descripe the issue you are facing.");
                 }
                 else {
-                    await context.PostAsync("My apologies. Please restate request.");
+                    await context.PostAsync("Are you having troubles accessing other webpages? DEBUG: no response");
                 }
             }
-            public async Task AfterITAsync(IDialogContext context, IAwaitable<bool> argument){
+            public async Task AfterITAsync(IDialogContext context, IAwaitable<string> argument){
                 var confirm = await argument;
-                if (confirm){
-                    await context.PostAsync("Connecting you to a support tech. Standby.");
-                }
-                else {
-                    await context.PostAsync("This issue falls under UITS. Please contact them via <way>");
-                }
+                await context.PostAsync("Thank you for the information. Connecting you to a support tech. Standby. DEBUG: send problem string to tech");
             }
         }
 
