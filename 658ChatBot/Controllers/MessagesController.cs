@@ -105,7 +105,7 @@ namespace _658ChatBot {
                     PromptDialog.Text(
                         context,
                         AfterITAsync,
-                        "Please descripe the issue you are facing.");
+                        "Please describe the issue you are facing.");
                 }
                 else {
                     await context.PostAsync("Are you having troubles accessing other webpages? DEBUG: no response");
