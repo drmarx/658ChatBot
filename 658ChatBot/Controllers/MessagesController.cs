@@ -8,6 +8,7 @@ using System.Web.Http.Description;
 using Microsoft.Bot.Connector;
 using Newtonsoft.Json;
 using Microsoft.Bot.Builder.Dialogs;
+using System.Collections.Generic;
 
 namespace _658ChatBot {
     [BotAuthentication]
@@ -22,10 +23,12 @@ namespace _658ChatBot {
         public async Task<HttpResponseMessage> Post([FromBody]Activity activity){
             ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
             if (activity.Type == ActivityTypes.Message){
-                await Conversation.SendAsync(activity, () => new EchoDialog()); // bot builder style
+                await Conversation.SendAsync(activity, () => new HelpDialog()); // bot builder style
             }
             else if (activity.Type == ActivityTypes.ConversationUpdate && activity.MembersAdded[0] != null && activity.MembersAdded[0].Name != "Bot"){ // greets user when they join
-                Activity reply = activity.CreateReply($"Hi! I'm the CS658 ChatBot.");
+                var reply = activity.CreateReply($"Hi! I'm the CS658 ChatBot.");
+                await connector.Conversations.ReplyToActivityAsync(reply);
+                reply = activity.CreateReply("What are you having trouble with today?");
                 await connector.Conversations.ReplyToActivityAsync(reply);
             }
             else {
@@ -36,20 +39,23 @@ namespace _658ChatBot {
         }
 
         [Serializable]
-        public class EchoDialog : IDialog<object> {
+        public class HelpDialog : IDialog<object> {
             protected int count = 1;
             public async Task StartAsync(IDialogContext context) {
                 context.Wait(MessageReceivedAsync);
             }
             public virtual async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> argument){
                 var message = await argument;
-                if (message.Text == "reset"){ // resets count when requested. asks for confirmation.
-                    PromptDialog.Confirm(
+                if (message.Text.Contains("printer") || message.Text.Contains("print")){ // resets count when requested. asks for confirmation.
+                    var printertype = new List<string>();
+                    printertype.Add("Local printer");
+                    printertype.Add("Network printer");
+                    PromptDialog.Choice(
                         context,
-                        AfterResetAsync,
-                        "Are you sure you want to reset the count?",
-                        "Didn't get that!",
-                        promptStyle: PromptStyle.None); // sends result of confirmation to reset handler
+                        AfterPrinterAsync,
+                        printertype,
+                        "What kind of printer is it?",
+                        promptStyle: PromptStyle.Auto); // sends result of confirmation to reset handler
                 }
                 else if (message.Text == "goodbye"){ // says goodbye and exits chat (not gracefully)
                     await context.PostAsync("Goodbye!");
@@ -61,7 +67,7 @@ namespace _658ChatBot {
                         context,
                         AfterEmailAsync,
                         "You are having trouble with your email?",
-                        "My apologies. I will contact a support tech. Standby.",
+                        "My apologies. Connecting you to a support tech. Standby.",
                         promptStyle: PromptStyle.Auto);
                 }
                 else {
@@ -69,6 +75,23 @@ namespace _658ChatBot {
                     context.Wait(MessageReceivedAsync);
                 }
             }
+
+            public async Task AfterPrinterAsync(IDialogContext context,IAwaitable<string> argument){
+                string type = await argument;
+                if (type == "Network printer") {
+                    //await context.PostAsync("Enter the name of the network printer:");
+                    PromptDialog.Text(
+                        context,
+                        AfterNetworkPrinterAsync,
+                        "What is the name of the network printer? Its name will be like \\ \\ADPRINT03\\BOL272a_PCL");
+                }
+            }
+
+            public async Task AfterNetworkPrinterAsync(IDialogContext context,IAwaitable<string> argument) {
+                string type = await argument;
+                await context.PostAsync("Please describe the issue you are experiencing with this printer. DEBUG: no response");
+            }
+
             public async Task AfterResetAsync(IDialogContext context, IAwaitable<bool> argument){ // conditional reset handler
                 var confirm = await argument;
                 if (confirm){
