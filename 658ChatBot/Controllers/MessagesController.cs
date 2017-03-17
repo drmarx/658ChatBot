@@ -36,14 +36,18 @@ namespace _658ChatBot {
         }
 
         [Serializable]
-        public class EchoDialog : IDialog<object> {
+        public class EchoDialog : IDialog<object>
+        {
             protected int count = 1;
-            public async Task StartAsync(IDialogContext context){
+            public async Task StartAsync(IDialogContext context)
+            {
                 context.Wait(MessageReceivedAsync);
             }
-            public virtual async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> argument){
+            public virtual async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> argument)
+            {
                 var message = await argument;
-                if (message.Text == "reset"){ // resets count when requested. asks for confirmation.
+                if (message.Text == "reset")
+                { // resets count when requested. asks for confirmation.
                     PromptDialog.Confirm(
                         context,
                         AfterResetAsync,
@@ -51,26 +55,69 @@ namespace _658ChatBot {
                         "Didn't get that!",
                         promptStyle: PromptStyle.None); // sends result of confirmation to reset handler
                 }
-                else if (message.Text == "goodbye"){ // says goodbye and exits chat (not gracefully)
+                else if (message.Text == "goodbye")
+                { // says goodbye and exits chat (not gracefully)
                     await context.PostAsync("Goodbye!");
                     context.Wait(MessageReceivedAsync);
                     Environment.Exit(0);
                 }
-                else {
+                else if (message.Text.Contains("email"))
+                {
+                    PromptDialog.Confirm(
+                        context,
+                        AfterEmailAsync,
+                        "You are having trouble with your email?",
+                        "My apologies. I will contact a support tech. Standby.",
+                        promptStyle: PromptStyle.Auto);
+                }
+                else
+                {
                     await context.PostAsync($"{this.count++}: You said {message.Text}"); // updates count and echoes user message
                     context.Wait(MessageReceivedAsync);
                 }
             }
-            public async Task AfterResetAsync(IDialogContext context, IAwaitable<bool> argument){ // conditional reset handler
+            public async Task AfterResetAsync(IDialogContext context, IAwaitable<bool> argument)
+            { // conditional reset handler
                 var confirm = await argument;
-                if (confirm){
+                if (confirm)
+                {
                     this.count = 1;
                     await context.PostAsync($"{this.count}: Reset count.");
                 }
-                else{
+                else
+                {
                     await context.PostAsync("Did not reset count.");
                 }
                 context.Wait(MessageReceivedAsync);
+            }
+            public async Task AfterEmailAsync(IDialogContext context, IAwaitable<bool> argument)
+            {
+                var confirm = await argument;
+                if (confirm)
+                {
+                    PromptDialog.Confirm(
+                        context,
+                        AfterITAsync,
+                        "Are you using the Outlook client or the website Outlook.Office365.com?",
+                        "My apologies. I will contact a support tech. Standby.",
+                        promptStyle: PromptStyle.Keyboard);
+                }
+                else
+                {
+                    await context.PostAsync("My apologies. Please restate request.");
+                }
+            }
+            public async Task AfterITAsync(IDialogContext context, IAwaitable<bool> argument)
+            {
+                var confirm = await argument;
+                if (confirm)
+                {
+                    await context.PostAsync("Connecting you to a support tech. Standby.");
+                }
+                else
+                {
+                    await context.PostAsync("This issue falls under UITS. Please contact them via <way>");
+                }
             }
         }
 
