@@ -9,9 +9,12 @@ using Microsoft.Bot.Connector;
 using Newtonsoft.Json;
 using Microsoft.Bot.Builder.Dialogs;
 using System.Collections.Generic;
+using Microsoft.Bot.Builder.Luis;
+using Microsoft.Bot.Builder.Luis.Models;
 
 namespace _658ChatBot {
     [BotAuthentication]
+    [LuisModel("8370a817-9d02-409e-afef-9dfb52b5534e","b3a83bcea307466da3008b8140fab7d0")]
     public class MessagesController : ApiController {
         /// <summary>
         /// POST: api/Messages
@@ -73,6 +76,14 @@ namespace _658ChatBot {
                 }
             }
 
+            [LuisIntent("")]
+            public async Task None(IDialogContext context,LuisResult result) {
+                string message = $"Sorry I did not understand: " + string.Join(", ",result.Intents.Select(i => i.Intent));
+                await context.PostAsync(message);
+                context.Wait(MessageReceivedAsync);
+            }
+
+            [LuisIntent("PrinterIntent")]
             public async Task AfterPrinterAsync(IDialogContext context,IAwaitable<string> argument){
                 string type = await argument;
                 if (type == "Network printer") { // if network printer
@@ -97,6 +108,7 @@ namespace _658ChatBot {
                         "Please describe the issue you are facing."); // send description to IT handler
             }
 
+            [LuisIntent("EmailIntent")]
             public async Task AfterEmailAsync(IDialogContext context, IAwaitable<string> argument){
                 var confirm = await argument;
                 if (confirm == "Outlook Client") {
