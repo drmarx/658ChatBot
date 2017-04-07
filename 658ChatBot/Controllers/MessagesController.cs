@@ -121,6 +121,42 @@ namespace _658ChatBot {
                     await context.PostAsync("Are you having troubles accessing other webpages? DEBUG: no response"); // to network?
                 }
             }
+
+            [LuisIntent("HardwareIntent")]
+            public async Task HardwareAsync(IDialogContext context, IAwaitable<string> argument) {
+                var device = await argument;
+                switch (device) {
+                    case "computer":
+                        // computer name dialog
+                        break;
+                    case "monitor":
+                        // ask if they want a rental
+                        break;
+                    case "iPad":
+                        // device name dialog
+                        break;
+                    case "Phone":
+                        // find out if they're in RVW or CAMB, o.w. send to Phone Services
+                        break;
+                    default:
+                        // generic question OR connect to HD tech
+                        break; 
+                }
+            }
+
+            [LuisIntent("SoftwareIntent")]
+            public async Task SoftwareAsync(IDialogContext context, IAwaitable<string> argument) {
+                var soft = await argument;
+                // ask software name
+            }
+
+            [LuisIntent("NetworkIntent")]
+            public async Task NetworkAsync(IDialogContext context, IAwaitable<string> argument) {
+                var desc = await argument;
+                // find out how many users are affected
+                // wifi or ethernet?
+            }
+
             public async Task AfterITAsync(IDialogContext context, IAwaitable<string> argument){ // TODO connect to support tech
                 var confirm = await argument;
                 await context.PostAsync("Thank you for the information. Connecting you to a support tech. Standby. DEBUG: send problem string to tech");
