@@ -147,7 +147,11 @@ namespace _658ChatBot {
             [LuisIntent("SoftwareIntent")]
             public async Task SoftwareAsync(IDialogContext context, IAwaitable<string> argument) {
                 var soft = await argument;
-                // ask software name
+                // put software name in cherwell ticket
+                PromptDialog.Text(
+                        context,
+                        AfterITAsync,
+                        "Please describe the issue you are facing."); // get issue description
             }
 
             [LuisIntent("NetworkIntent")]
@@ -158,7 +162,7 @@ namespace _658ChatBot {
             }
 
             public async Task AfterITAsync(IDialogContext context, IAwaitable<string> argument){ // TODO connect to support tech
-                var confirm = await argument;
+                var desc = await argument;
                 await context.PostAsync("Thank you for the information. Connecting you to a support tech. Standby. DEBUG: send problem string to tech");
             }
         }
