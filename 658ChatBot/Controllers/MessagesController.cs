@@ -14,7 +14,7 @@ using Microsoft.Bot.Builder.Luis.Models;
 
 namespace _658ChatBot {
     [BotAuthentication]
-    [LuisModel("8370a817-9d02-409e-afef-9dfb52b5534e","b3a83bcea307466da3008b8140fab7d0")]
+    
     public class MessagesController : ApiController {
         /// <summary>
         /// POST: api/Messages
@@ -39,9 +39,14 @@ namespace _658ChatBot {
             return response;
         }
 
+        [LuisModel("8370a817-9d02-409e-afef-9dfb52b5534e","b3a83bcea307466da3008b8140fab7d0")]
         [Serializable]
-        public class HelpDialog : IDialog<object> {
+        public class HelpDialog : LuisDialog<object> {
+
+            //LuisResult currentR;
             // protected int count = 1;
+            string incident = "";
+
             public async Task StartAsync(IDialogContext context) {
                 context.Wait(MessageReceivedAsync);
             }
@@ -51,23 +56,23 @@ namespace _658ChatBot {
                     var printertype = new List<string>();
                     printertype.Add("Local printer");
                     printertype.Add("Network printer");
-                    PromptDialog.Choice(
+/*                    PromptDialog.Choice(
                         context,
                         AfterPrinterAsync,
                         printertype,
                         "What kind of printer is it?",
-                        promptStyle: PromptStyle.Auto); // sends result to printer handler
+                        promptStyle: PromptStyle.Auto); // sends result to printer handler*/
                 }
                 else if (message.Text.Contains("email") || message.Text.Contains("e-mail")){ // begins email troubleshooting
                     var emailroute = new List<string>();
                     emailroute.Add("Outlook Client");
                     emailroute.Add("Outlook.Office365.com");
-                    PromptDialog.Choice(
+/*                    PromptDialog.Choice(
                         context,
                         AfterEmailAsync,
                         emailroute,
                         "How are you accessing your email?",
-                        promptStyle: PromptStyle.Auto); // sends result to email handler
+                        promptStyle: PromptStyle.Auto); // sends result to email handler */
                 }
                 else if (message.Text == "goodbye") { // says goodbye and exits chat (not gracefully)
                     await context.PostAsync("Goodbye!");
@@ -84,47 +89,73 @@ namespace _658ChatBot {
             }
 
             [LuisIntent("PrinterIntent")]
-            public async Task AfterPrinterAsync(IDialogContext context,IAwaitable<string> argument){
+            public async Task PrinterAsync(IDialogContext context,LuisResult result) {
+                incident += result.Query + "\n";
+                var printertype = new List<string>();
+                printertype.Add("Local printer");
+                printertype.Add("Network printer");
+                    PromptDialog.Choice(
+                        context,
+                        AfterPrinterAsync,
+                        printertype,
+                        "What kind of printer is it?",
+                        promptStyle: PromptStyle.Auto); // sends result to printer handler
+            }
+
+            public async Task AfterPrinterAsync(IDialogContext context,IAwaitable<string> argument) {
                 string type = await argument;
                 if (type == "Network printer") { // if network printer
                     PromptDialog.Text(
                         context,
-                        AfterNetworkPrinterAsync,
+                        AfterPrinterQueryAsync,
                         "What is the name of the network printer? Its name will be like " + @"\\\\" + "ADPRINT03\\BOL272a_PCL");
                 }
                 else { // if local printer
                     PromptDialog.Text(
                         context,
-                        AfterNetworkPrinterAsync,
-                        "What is the model of your printer?");
+                        AfterPrinterQueryAsync,
+                        "What is the model of your printer?"); // go to ask computer name TODO add get computer name task
                 }
             }
 
-            public async Task AfterNetworkPrinterAsync(IDialogContext context,IAwaitable<string> argument) {
+            public async Task AfterPrinterQueryAsync(IDialogContext context,IAwaitable<string> argument) {
                 string type = await argument;
+                incident += $"Printer: {argument}\n";
                 PromptDialog.Text(
                         context,
                         AfterITAsync,
-                        "Please describe the issue you are facing."); // send description to IT handler
+                        "What is your computer's name? You can find this either on a black and white label visible on your computer, or by following the below instructions depending on your device:\nWindows: press <Windows Key>+Pause/Break\nMac: go to Apple Menu -> System Preferences ->Sharing\nThe name will be in the form of SA-{7 or 11 characters}"); // send description to IT handler
             }
 
             [LuisIntent("EmailIntent")]
-            public async Task AfterEmailAsync(IDialogContext context, IAwaitable<string> argument){
+            public async Task EmailAsync(IDialogContext context,LuisResult result) {
+                var emailroute = new List<string>();
+                emailroute.Add("Outlook Client");
+                emailroute.Add("Outlook.Office365.com");
+                    PromptDialog.Choice(
+                        context,
+                        AfterEmailAsync,
+                        emailroute,
+                        "How are you accessing your email?",
+                        promptStyle: PromptStyle.Auto);
+            }
+
+            public async Task AfterEmailAsync(IDialogContext context,IAwaitable<string> argument) {
                 var confirm = await argument;
                 if (confirm == "Outlook Client") {
                     PromptDialog.Text(
                         context,
                         AfterITAsync,
-                        "Please describe the issue you are facing."); // send description to IT handler
+                        "Please describe the issue you are facing in more detail."); // send description to IT handler
                 }
                 else {
-                    await context.PostAsync("Are you having troubles accessing other webpages? DEBUG: no response"); // to network?
+                    await context.PostAsync("Are you having troubles accessing other webpages? DEBUG: no response"); // yes: to network, no: to uits
                 }
             }
 
             [LuisIntent("HardwareIntent")]
-            public async Task HardwareAsync(IDialogContext context, IAwaitable<string> argument) {
-                var device = await argument;
+            public async Task HardwareAsync(IDialogContext context,LuisResult result) {
+                var device = result.Dialog.ToString();
                 switch (device) {
                     case "computer":
                         // computer name dialog
@@ -145,24 +176,27 @@ namespace _658ChatBot {
             }
 
             [LuisIntent("SoftwareIntent")]
-            public async Task SoftwareAsync(IDialogContext context, IAwaitable<string> argument) {
-                var soft = await argument;
+            public async Task SoftwareAsync(IDialogContext context,LuisResult result) {
+                incident += $"Description: {result.Query}\n";
                 // put software name in cherwell ticket
                 PromptDialog.Text(
                         context,
                         AfterITAsync,
-                        "Please describe the issue you are facing."); // get issue description
+                        "Please describe the issue you are facing in more detail."); // get issue description
             }
 
             [LuisIntent("NetworkIntent")]
-            public async Task NetworkAsync(IDialogContext context, IAwaitable<string> argument) {
-                var desc = await argument;
+            public async Task NetworkAsync(IDialogContext context,LuisResult result) {
+                var desc = result.Query;
+                var intent = result.TopScoringIntent.Intent.ToString();
+                await context.PostAsync($"You said {desc} which matches to {intent}");
                 // find out how many users are affected
                 // wifi or ethernet?
             }
 
             public async Task AfterITAsync(IDialogContext context, IAwaitable<string> argument){ // TODO connect to support tech
                 var desc = await argument;
+                incident += $"Description: {desc}\n";
                 await context.PostAsync("Thank you for the information. Connecting you to a support tech. Standby. DEBUG: send problem string to tech");
             }
         }
