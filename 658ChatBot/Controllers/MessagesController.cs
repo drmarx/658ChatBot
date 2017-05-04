@@ -21,12 +21,14 @@ namespace _658ChatBot {
         /// calls HelpDialog
         /// begins simple IT troubleshooting / info gathering
         /// </summary>
+        static string requestor;
         public async Task<HttpResponseMessage> Post([FromBody]Activity activity){
             ConnectorClient connector = new ConnectorClient(new Uri(activity.ServiceUrl));
             if (activity.Type == ActivityTypes.Message){
                 await Conversation.SendAsync(activity, () => new HelpDialog()); // begins conversation
             }
             else if (activity.Type == ActivityTypes.ConversationUpdate && activity.MembersAdded[0] != null && activity.MembersAdded[0].Name != "Bot"){ // greets user when they join
+                requestor = activity.MembersAdded[0].Id;
                 var reply = activity.CreateReply($"Hi! I'm the CS658 ChatBot.");
                 await connector.Conversations.ReplyToActivityAsync(reply);
                 reply = activity.CreateReply("What are you having trouble with today?");
@@ -45,7 +47,7 @@ namespace _658ChatBot {
 
             //LuisResult currentR;
             // protected int count = 1;
-            string incident = "";
+            string incident = $"Cherwell Ticket {Conversation.Container.GetHashCode()}\nRequestor {requestor}\n";
 
             public async Task StartAsync(IDialogContext context) {
                 context.Wait(MessageReceivedAsync);
@@ -90,7 +92,7 @@ namespace _658ChatBot {
 
             [LuisIntent("PrinterIntent")]
             public async Task PrinterAsync(IDialogContext context,LuisResult result) {
-                incident += result.Query + "\n";
+                //incident += result.Query + "\n";
                 var printertype = new List<string>();
                 printertype.Add("Local printer");
                 printertype.Add("Network printer");
@@ -123,7 +125,7 @@ namespace _658ChatBot {
                 incident += $"Printer: {argument}\n";
                 PromptDialog.Text(
                         context,
-                        AfterITAsync,
+                        ComputerAsync,
                         "What is your computer's name? You can find this either on a black and white label visible on your computer, or by following the below instructions depending on your device:\nWindows: press <Windows Key>+Pause/Break\nMac: go to Apple Menu -> System Preferences ->Sharing\nThe name will be in the form of SA-{7 or 11 characters}"); // send description to IT handler
             }
 
@@ -145,40 +147,47 @@ namespace _658ChatBot {
                 if (confirm == "Outlook Client") {
                     PromptDialog.Text(
                         context,
-                        AfterITAsync,
-                        "Please describe the issue you are facing in more detail."); // send description to IT handler
-                }
+                        ComputerAsync,
+                        "What is your computer's name? You can find this either on a black and white label visible on your computer, or by following the below instructions depending on your device:\nWindows: press <Windows Key>+Pause/Break\nMac: go to Apple Menu -> System Preferences ->Sharing\nThe name will be in the form of SA-{7 or 11 characters}"); // send description to IT handler
+            }
                 else {
-                    await context.PostAsync("Are you having troubles accessing other webpages? DEBUG: no response"); // yes: to network, no: to uits
+                    PromptDialog.Confirm(
+                        context,
+                        UITSAsync,
+                        "Are you having troubles accessing other webpages?",
+                        promptStyle: PromptStyle.None);
                 }
             }
 
             [LuisIntent("HardwareIntent")]
             public async Task HardwareAsync(IDialogContext context,LuisResult result) {
-                var device = result.Dialog.ToString();
-                switch (device) {
-                    case "computer":
-                        // computer name dialog
-                        break;
-                    case "monitor":
-                        // ask if they want a rental
-                        break;
-                    case "iPad":
-                        // device name dialog
-                        break;
-                    case "Phone":
-                        // find out if they're in RVW or CAMB, o.w. send to Phone Services
-                        break;
-                    default:
-                        // generic question OR connect to HD tech
-                        break; 
-                }
+                EntityRecommendation hard;
+                result.TryFindEntity("Hardware",out hard);
+                incident += $"Hardware: {hard.Entity}\n";
+                await context.PostAsync($"It sounds like you're having trouble with hardware, your {hard.Entity}. We are going to ask for your computer name, which we will use for owner and location information.");
+                PromptDialog.Text(
+                    context,
+                    ComputerAsync,
+                    "What is your computer's name? You can find this either on a black and white label visible on your computer, or by following the below instructions depending on your device:\nWindows: press <Windows Key>+Pause/Break\nMac: go to Apple Menu -> System Preferences ->Sharing\nThe name will be in the form of SA-{7 or 11 characters}"); // send description to IT handler
             }
+
 
             [LuisIntent("SoftwareIntent")]
             public async Task SoftwareAsync(IDialogContext context,LuisResult result) {
-                incident += $"Description: {result.Query}\n";
+                EntityRecommendation soft;
+                result.TryFindEntity("Software",out soft);
+                incident += $"Software: {soft.Entity}\n";
+                await context.PostAsync($"It sounds like you're having trouble with software, {soft.Entity}. We are going to ask for your computer name, which we will use for owner and location information.");
                 // put software name in cherwell ticket
+                PromptDialog.Text(
+                    context,
+                    ComputerAsync,
+                    "What is your computer's name? You can find this either on a black and white label visible on your computer, or by following the below instructions depending on your device:\nWindows: press <Windows Key>+Pause/Break\nMac: go to Apple Menu -> System Preferences ->Sharing\nThe name will be in the form of SA-{7 or 11 characters}"); // send description to IT handler
+            }
+
+            public async Task ComputerAsync(IDialogContext context,IAwaitable<string> argument) {
+                var computer = await argument;
+                incident += $"Computer Name: {computer}\n";
                 PromptDialog.Text(
                         context,
                         AfterITAsync,
@@ -187,17 +196,29 @@ namespace _658ChatBot {
 
             [LuisIntent("NetworkIntent")]
             public async Task NetworkAsync(IDialogContext context,LuisResult result) {
-                var desc = result.Query;
-                var intent = result.TopScoringIntent.Intent.ToString();
-                await context.PostAsync($"You said {desc} which matches to {intent}");
-                // find out how many users are affected
-                // wifi or ethernet?
+                PromptDialog.Confirm(
+                        context,
+                        UITSAsync,
+                        "Are you connecting via UWMWifi, Eduroam, or UWM's Public Network?",
+                        promptStyle: PromptStyle.None);
             }
 
             public async Task AfterITAsync(IDialogContext context, IAwaitable<string> argument){ // TODO connect to support tech
                 var desc = await argument;
                 incident += $"Description: {desc}\n";
-                await context.PostAsync("Thank you for the information. Connecting you to a support tech. Standby. DEBUG: send problem string to tech");
+                await context.PostAsync("Thank you for the information. We are submitting an incident into our ticket tracking system on your behalf. A member of our IT department will contact you shortly.");
+                await context.PostAsync($"{incident}");
+            }
+
+            public async Task UITSAsync(IDialogContext context, IAwaitable<bool> confirm) {
+                var conf = await confirm;
+                if (conf) {
+                    PromptDialog.Text(
+                        context,
+                        AfterITAsync,
+                        "Please describe the issue you are facing in more detail."); // get issue description
+                }
+                else await context.PostAsync("Unfortunately, this issue falls outside of our jurisdiction. Please contact UITS about this issue at {...}");
             }
         }
 
