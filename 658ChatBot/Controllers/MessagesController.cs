@@ -55,29 +55,7 @@ namespace _658ChatBot {
             }
             public virtual async Task MessageReceivedAsync(IDialogContext context, IAwaitable<IMessageActivity> argument){
                 var message = await argument;
-                if (message.Text.Contains("printer") || message.Text.Contains("print")){ // begins printer troubleshooting
-                    var printertype = new List<string>();
-                    printertype.Add("Local printer");
-                    printertype.Add("Network printer");
-/*                    PromptDialog.Choice(
-                        context,
-                        AfterPrinterAsync,
-                        printertype,
-                        "What kind of printer is it?",
-                        promptStyle: PromptStyle.Auto); // sends result to printer handler*/
-                }
-                else if (message.Text.Contains("email") || message.Text.Contains("e-mail")){ // begins email troubleshooting
-                    var emailroute = new List<string>();
-                    emailroute.Add("Outlook Client");
-                    emailroute.Add("Outlook.Office365.com");
-/*                    PromptDialog.Choice(
-                        context,
-                        AfterEmailAsync,
-                        emailroute,
-                        "How are you accessing your email?",
-                        promptStyle: PromptStyle.Auto); // sends result to email handler */
-                }
-                else if (message.Text == "goodbye") { // says goodbye and exits chat (not gracefully)
+                if (message.Text == "goodbye") { // says goodbye and exits chat (not gracefully)
                     await context.PostAsync("Goodbye!");
                     context.Wait(MessageReceivedAsync);
                     Environment.Exit(0);
