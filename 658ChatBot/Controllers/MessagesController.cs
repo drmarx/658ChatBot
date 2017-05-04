@@ -47,7 +47,8 @@ namespace _658ChatBot {
 
             //LuisResult currentR;
             // protected int count = 1;
-            string incident = $"Cherwell Ticket {Conversation.Container.GetHashCode()}\nRequestor {requestor}\n";
+            string incident = $"Ticket Gen: {Conversation.Container.GetHashCode()}\r\nRequestor: {requestor}\r\n";
+            int unknown = 0; // number of times program will ask again before giving up and going to issue description
 
             public async Task StartAsync(IDialogContext context) {
                 context.Wait(MessageReceivedAsync);
@@ -85,9 +86,16 @@ namespace _658ChatBot {
 
             [LuisIntent("")]
             public async Task None(IDialogContext context,LuisResult result) {
+                unknown++;
                 string message = $"Sorry I did not understand: " + string.Join(", ",result.Intents.Select(i => i.Intent));
                 await context.PostAsync(message);
                 context.Wait(MessageReceivedAsync);
+                if (unknown == 2) {
+                    PromptDialog.Text(
+                        context,
+                        AfterITAsync,
+                        "We cannot programmatically categorize your request. Please describe the issue you are facing in more detail."); // get issue description
+                }
             }
 
             [LuisIntent("PrinterIntent")]
@@ -122,11 +130,11 @@ namespace _658ChatBot {
 
             public async Task AfterPrinterQueryAsync(IDialogContext context,IAwaitable<string> argument) {
                 string type = await argument;
-                incident += $"Printer: {argument}\n";
+                incident += $"Printer: {argument}\r\n";
                 PromptDialog.Text(
                         context,
                         ComputerAsync,
-                        "What is your computer's name? You can find this either on a black and white label visible on your computer, or by following the below instructions depending on your device:\nWindows: press <Windows Key>+Pause/Break\nMac: go to Apple Menu -> System Preferences ->Sharing\nThe name will be in the form of SA-{7 or 11 characters}"); // send description to IT handler
+                        "What is your computer's name? You can find this either on a black and white label visible on your computer, or by following the below instructions depending on your device:\r\nWindows: press <Windows Key>+Pause/Break\r\nMac: go to Apple Menu -> System Preferences ->Sharing\r\nThe name will be in the form of SA-{7 or 11 characters}"); // send description to IT handler
             }
 
             [LuisIntent("EmailIntent")]
@@ -148,7 +156,7 @@ namespace _658ChatBot {
                     PromptDialog.Text(
                         context,
                         ComputerAsync,
-                        "What is your computer's name? You can find this either on a black and white label visible on your computer, or by following the below instructions depending on your device:\nWindows: press <Windows Key>+Pause/Break\nMac: go to Apple Menu -> System Preferences ->Sharing\nThe name will be in the form of SA-{7 or 11 characters}"); // send description to IT handler
+                        "What is your computer's name? You can find this either on a black and white label visible on your computer, or by following the below instructions depending on your device:\r\nWindows: press <Windows Key>+Pause/Break\r\nMac: go to Apple Menu -> System Preferences ->Sharing\r\nThe name will be in the form of SA-{7 or 11 characters}"); // send description to IT handler
             }
                 else {
                     PromptDialog.Confirm(
@@ -163,12 +171,12 @@ namespace _658ChatBot {
             public async Task HardwareAsync(IDialogContext context,LuisResult result) {
                 EntityRecommendation hard;
                 result.TryFindEntity("Hardware",out hard);
-                incident += $"Hardware: {hard.Entity}\n";
+                incident += $"Hardware: {hard.Entity}\r\n";
                 await context.PostAsync($"It sounds like you're having trouble with hardware, your {hard.Entity}. We are going to ask for your computer name, which we will use for owner and location information.");
                 PromptDialog.Text(
                     context,
                     ComputerAsync,
-                    "What is your computer's name? You can find this either on a black and white label visible on your computer, or by following the below instructions depending on your device:\nWindows: press <Windows Key>+Pause/Break\nMac: go to Apple Menu -> System Preferences ->Sharing\nThe name will be in the form of SA-{7 or 11 characters}"); // send description to IT handler
+                    "What is your computer's name? You can find this either on a black and white label visible on your computer, or by following the below instructions depending on your device:\r\nWindows: press <Windows Key>+Pause/Break\r\nMac: go to Apple Menu -> System Preferences ->Sharing\r\nThe name will be in the form of SA-{7 or 11 characters}"); // send description to IT handler
             }
 
 
@@ -176,18 +184,18 @@ namespace _658ChatBot {
             public async Task SoftwareAsync(IDialogContext context,LuisResult result) {
                 EntityRecommendation soft;
                 result.TryFindEntity("Software",out soft);
-                incident += $"Software: {soft.Entity}\n";
+                incident += $"Software: {soft.Entity}\r\n";
                 await context.PostAsync($"It sounds like you're having trouble with software, {soft.Entity}. We are going to ask for your computer name, which we will use for owner and location information.");
                 // put software name in cherwell ticket
                 PromptDialog.Text(
                     context,
                     ComputerAsync,
-                    "What is your computer's name? You can find this either on a black and white label visible on your computer, or by following the below instructions depending on your device:\nWindows: press <Windows Key>+Pause/Break\nMac: go to Apple Menu -> System Preferences ->Sharing\nThe name will be in the form of SA-{7 or 11 characters}"); // send description to IT handler
+                    "What is your computer's name? You can find this either on a black and white label visible on your computer, or by following the below instructions depending on your device:\r\nWindows: press <Windows Key>+Pause/Break\r\nMac: go to Apple Menu -> System Preferences ->Sharing\r\nThe name will be in the form of SA-{7 or 11 characters}"); // send description to IT handler
             }
 
             public async Task ComputerAsync(IDialogContext context,IAwaitable<string> argument) {
                 var computer = await argument;
-                incident += $"Computer Name: {computer}\n";
+                incident += $"Computer Name: {computer}\r\n";
                 PromptDialog.Text(
                         context,
                         AfterITAsync,
@@ -205,7 +213,7 @@ namespace _658ChatBot {
 
             public async Task AfterITAsync(IDialogContext context, IAwaitable<string> argument){ // TODO connect to support tech
                 var desc = await argument;
-                incident += $"Description: {desc}\n";
+                incident += $"Description: {desc}\r\n";
                 await context.PostAsync("Thank you for the information. We are submitting an incident into our ticket tracking system on your behalf. A member of our IT department will contact you shortly.");
                 await context.PostAsync($"{incident}");
             }
