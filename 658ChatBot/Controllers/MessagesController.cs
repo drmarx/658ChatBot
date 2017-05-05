@@ -78,7 +78,6 @@ namespace _658ChatBot {
 
             [LuisIntent("PrinterIntent")]
             public async Task PrinterAsync(IDialogContext context,LuisResult result) {
-                //incident += result.Query + "\n";
                 var printertype = new List<string>();
                 printertype.Add("Local printer");
                 printertype.Add("Network printer");
@@ -102,7 +101,7 @@ namespace _658ChatBot {
                     PromptDialog.Text(
                         context,
                         AfterPrinterQueryAsync,
-                        "What is the model of your printer?"); // go to ask computer name TODO add get computer name task
+                        "What is the model of your printer?");
                 }
             }
 
@@ -198,13 +197,13 @@ namespace _658ChatBot {
 
             public async Task UITSAsync(IDialogContext context, IAwaitable<bool> confirm) {
                 var conf = await confirm;
-                if (conf) {
+                if (!conf) {
                     PromptDialog.Text(
                         context,
                         AfterITAsync,
                         "Please describe the issue you are facing in more detail."); // get issue description
                 }
-                else await context.PostAsync("Unfortunately, this issue falls outside of our jurisdiction. Please contact UITS about this issue at {...}");
+                else await context.PostAsync("Unfortunately, this issue is outside of our scope. Please contact UITS about this issue at https://http://uwm.edu/technology/help/ or by calling 229 4040.");
             }
         }
 
